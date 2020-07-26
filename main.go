@@ -31,6 +31,16 @@ func main() {
 		api.AddConfig(&param)
 		c.JSON(200, nil)
 	})
+	r.POST("/expconf/mod_config", func(c *gin.Context) {
+		d, _ := c.GetRawData()
+		param := proto.ModConfigParam{}
+
+		json.Unmarshal([]byte(d), &param)
+		fmt.Println(param)
+
+		api.ModConfig(&param)
+		c.JSON(200, nil)
+	})
 	r.POST("/expconf/get_groups", func(c *gin.Context) {
 		d, _ := c.GetRawData()
 		param := &proto.GetGroupsParam{}

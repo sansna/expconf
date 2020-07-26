@@ -73,7 +73,7 @@ type GetConfigData struct {
 	*RecordSt
 }
 
-type ModconfigParam struct {
+type ModConfigParam struct {
 	App     string `json:"app"`
 	Env     string `json:"env"`
 	ExpName string `json:"exp_name"`
@@ -81,3 +81,4 @@ type ModconfigParam struct {
 	SetSt int64 `json:"set_st,omitempty"`
 	SetEt int64 `json:"set_et,omitempty"`
 }
+type ModConfigResp BaseResp
