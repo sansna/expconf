@@ -1,6 +1,7 @@
 package api
 
 import (
+	//"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -44,12 +45,18 @@ func GetGroupOrAdd(conn *gorm.DB, tid int64, name string) int64 {
 	return gst.Id
 }
 
+// 如果指定except_et >= 0，则过滤该指定et的配置, < 0情况不过滤
 // retval: false: do conflict
 // true: no conflict
-func FindNoConflictRecord(conn *gorm.DB, r *proto.OneModifySt) bool {
+func FindNoConflictRecord(conn *gorm.DB, r *proto.OneModifySt, except_et int64) bool {
 	other := proto.RecordSt{}
-	conn.Where("tid=? and `key`=? and ((st < ? and ? < et) or (st < ? and ? < et))", r.Tid, r.Key, r.Et, r.Et, r.St, r.St).Limit(1).Find(&other)
+	if except_et >= 0 {
+		conn.Where("tid=? and `key`=? and ((st < ? and ? < et) or (st < ? and ? < et) or (? < st and et < ?)) and et != ?", r.Tid, r.Key, r.Et, r.Et, r.St, r.St, r.St, r.Et, except_et).Limit(1).Find(&other)
+	} else {
+		conn.Where("tid=? and `key`=? and ((st < ? and ? < et) or (st < ? and ? < et) or (? < st and et < ?))", r.Tid, r.Key, r.Et, r.Et, r.St, r.St, r.St, r.Et).Limit(1).Find(&other)
+	}
 	fmt.Println("found other as dup", other.ID, r.Et, r.St, other.Et, other.St)
+
 	if len(other.Key) > 0 {
 		return false
 	}
@@ -91,7 +98,7 @@ func AddConfig(param *proto.AddConfigParam) (err error) {
 			return errors.New("tid not found.")
 		}
 		param.OneModifySt.Tid = tid
-		if FindNoConflictRecord(db, param.OneModifySt) {
+		if FindNoConflictRecord(db, param.OneModifySt, -1) {
 			db.Create(&proto.RecordSt{
 				OneModifySt: param.OneModifySt,
 			})
@@ -155,53 +162,70 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 	set_et := param.SetEt
 	del := param.Del
 
+	//byt, _ := json.Marshal(param)
+	//fmt.Println(string(byt))
+
 	dbname := GetDbName(app, env)
 	if len(dbname) == 0 {
 		return errors.New("no db specified.")
 	}
 
 	db := models.GetConn(dbname)
-	fmt.Println(models.DB_CONF)
+	fmt.Println(db, models.DB_CONF)
 	// 开始事务
 	db = db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
+			fmt.Println("rollback because recov")
 			db.Rollback()
 		} else if err != nil {
+			fmt.Println("rollback because err", err)
 			db.Rollback()
 		}
 	}()
 	if db == nil {
+		fmt.Println("db nil. param", param)
 		return errors.New(" no conn get:" + dbname)
 	}
 
 	if del {
-		db.Where("tid=? and `key`=? and et=?", tid, key, et).Delete(proto.RecordSt{})
+		cnt := db.Where("tid=? and `key`=? and et=?", tid, key, et).Delete(&proto.RecordSt{}).RowsAffected
+		fmt.Println("deleted ", cnt)
+		//if err != nil {
+		//	fmt.Println("fail del ", param, err)
+		//	return
+		//}
 	} else {
 		// modify
 		map_updates := make(map[string]interface{})
 		map_updates["val"] = val
+		map_updates["ut"] = time.Now().Unix()
 		// 针对修改生效起时时间的要检查是否与其他规则冲突
+		orig_record := proto.RecordSt{}
+		err = db.Where("tid=? and `key`=? and et=? and del=false", tid, key, et).Limit(1).Find(&orig_record).Error
+		if err != nil {
+			fmt.Println("no orig rec. param", param, err)
+			return
+		}
+
 		if set_st >= 0 {
 			map_updates["st"] = set_st
-			var cnt int
-			db.Model(proto.RecordSt{}).Where("tid = ? and `key` = ? and (st < ? and ? < et) and et != ?", tid, key, set_st, et).Count(&cnt)
-			if cnt > 0 {
-				fmt.Println("conflict st, param", param, err)
-				return errors.New("conflict with exist config")
-			}
+			orig_record.St = set_st
 		}
 		if set_et >= 0 {
 			map_updates["et"] = set_et
-			var cnt int
-			db.Model(proto.RecordSt{}).Where("tid = ? and `key` = ? and (st < ? and ? < et) and et != ?", tid, key, set_et, et).Count(&cnt)
-			if cnt > 0 {
-				fmt.Println("conflict et, param", param, err)
-				return errors.New("conflict with exist config")
-			}
+			orig_record.Et = set_et
 		}
 
-		err = db.Model(proto.RecordSt{}).Where("tid=? and `key`=? and et=?", tid, key, et).Updates(map_updates).Error
+		if !FindNoConflictRecord(db, orig_record.OneModifySt, et) {
+			// conflict
+			err = errors.New("conflicted, modfication not take eff.")
+			fmt.Println("conflict, param", param)
+			return
+		}
+
+		fmt.Println("got mapupdate: ", map_updates)
+		err = db.Model(&proto.RecordSt{}).Where("tid=? and `key`=? and et=?", tid, key, et).Updates(map_updates).Error
 		if err != nil {
 			fmt.Println("fail update param", param, "err:", err)
 			return errors.New(" fail update config.")

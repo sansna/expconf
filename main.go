@@ -36,7 +36,7 @@ func main() {
 		param := proto.ModConfigParam{}
 
 		json.Unmarshal([]byte(d), &param)
-		fmt.Println(param)
+		fmt.Println(param, param.OneModifySt)
 
 		api.ModConfig(&param)
 		c.JSON(200, nil)
