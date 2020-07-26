@@ -49,7 +49,8 @@ func GetGroupOrAdd(conn *gorm.DB, tid int64, name string) int64 {
 func FindNoConflictRecord(conn *gorm.DB, r *proto.OneModifySt) bool {
 	other := proto.RecordSt{}
 	//conn.Limit(1).Find(&other, conn.Where())
-	conn.Where("tid=? and `key`=? and not (st < ? < et) and not (et > 0 and st < ? < et)", r.Tid, r.Key, r.Et, r.St).Limit(1).Find(&other)
+	conn.Where("tid=? and `key`=? and ((st < ? and ? < et) or (st < ? and ? < et))", r.Tid, r.Key, r.Et, r.Et, r.St, r.St).Limit(1).Find(&other)
+	fmt.Println("found other as dup", other.ID, r.Et, r.St, other.Et, other.St)
 	if len(other.Key) > 0 {
 		return false
 	}
@@ -60,6 +61,9 @@ func AddConfig(param *proto.AddConfigParam) (err error) {
 	//fun := "AddConfig"
 
 	if param.St < 0 || param.Et < 0 || len(param.Val) == 0 || param.Tid < 0 || len(param.Key) == 0 {
+		return nil
+	}
+	if param.St >= param.Et && param.Et > 0 {
 		return nil
 	}
 	if param.Tid == 0 && len(param.ExpName) == 0 {
