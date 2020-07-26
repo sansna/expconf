@@ -12,3 +12,7 @@ Trying to make it a config store service with great features:
 1. start mysql server at local (should be configured as root and with no password)
 2. go build main.go
 3. ./main
+
+### TODO
+1. Log module
+2. Retvals more friendly
