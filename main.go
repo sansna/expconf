@@ -15,14 +15,16 @@ import (
 )
 
 func main() {
-	models.InitDB("default")
+	models.InitDB(models.DEFAULT_DB_NAME)
+
 	fmt.Println(models.DB_CONF)
+
 	r := gin.Default()
+
 	r.POST("/expconf/add_config", func(c *gin.Context) {
 		d, _ := c.GetRawData()
 		param := proto.AddConfigParam{}
 
-		//d := "{\"app\":\"hanabi\",\"env\":\"test\",\"exp_name\":\"hanabi_record_config\",\"key\":\"open_test\",\"val\":\"{a:12,zxcv:{ex:18}}\"}"
 		json.Unmarshal([]byte(d), &param)
 		fmt.Println(param)
 

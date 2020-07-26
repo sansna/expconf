@@ -25,7 +25,6 @@ func GetDbName(app string, env string) string {
 // = 0: not found.
 func GetGroupOrAdd(conn *gorm.DB, tid int64, name string) int64 {
 	gst := proto.GroupSt{}
-	//conn.Find(&gst, conn.Where("id=? and del = false"), tid)
 	err := conn.Where("id=? and del = false", tid).Find(&gst).Error
 	if err != nil {
 		fmt.Println(err)
@@ -76,6 +75,8 @@ func AddConfig(param *proto.AddConfigParam) (err error) {
 		db = db.Begin()
 		defer func() {
 			if r := recover(); r != nil {
+				db.Rollback()
+			} else if err != nil {
 				db.Rollback()
 			}
 		}()
