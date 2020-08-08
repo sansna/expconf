@@ -137,15 +137,22 @@ func GetConfig(param *proto.GetConfigParam) (data *proto.GetConfigData, err erro
 	tid := param.Tid
 	key := param.Key
 
+	data = &proto.GetConfigData{}
 	now := time.Now().Unix()
 
 	r := proto.RecordSt{}
 	dbname := GetDbName(app, env)
 	db := models.GetConn(dbname)
-	db.Where("tid = ? and `key` = ? and ((st < ? and ? < et) or et = 0)", tid, key, now, now).Order("et desc").Limit(1).Find(&r)
-	data = &proto.GetConfigData{
-		RecordSt: &r,
+	//err = db.Table("record_sts").Where("tid = ? and `key` = ? and ((st < ? and ? < et) or et = 0)", tid, key, now, now).Order("et desc").Limit(1).First(&r).Error
+	err = db.Where("tid = ? and `key` = ? and ((st < ? and ? < et) or et = 0)", tid, key, now, now).Order("et desc").Limit(1).First(&r).Error
+	if err == gorm.ErrRecordNotFound {
+		err = nil
+		return
+	} else if err != nil {
+		fmt.Println(err)
+		return
 	}
+	data.RecordSt = &r
 
 	fmt.Println(tid, key, now, r)
 	return
