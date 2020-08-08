@@ -7,14 +7,15 @@ type BaseResp struct {
 }
 
 type OneModifySt struct {
-	ID  int64  `gorm:"column:_id;primary_key;not_null;auto_increment" json:"_id"`
-	Tid int64  `gorm:"column:tid;not_null" json:"tid"`
-	Key string `gorm:"column:key;type:varchar(64);not_null" json:"key"`
-	Val string `gorm:"column:val;type:mediumtext;" json:"val"`
-	St  int64  `gorm:"not_null;default:0" json:"st"`
-	Et  int64  `gorm:"not_null;default:0" json:"et"`
-	Ut  int64  `gorm:"not_null;default:0" json:"ut"`
-	Del bool   `gorm:"type:bool;not_null;default:false" json:"del,omitempty"`
+	ID    int64  `gorm:"column:_id;primary_key;not_null;auto_increment" json:"_id"`
+	Tid   int64  `gorm:"column:tid;not_null" json:"tid"`
+	Key   string `gorm:"column:key;type:varchar(64);not_null" json:"key"`
+	Val   string `gorm:"column:val;type:mediumtext;" json:"val"`
+	St    int64  `gorm:"not_null;default:0" json:"st"`
+	Et    int64  `gorm:"not_null;default:0" json:"et"`
+	Ut    int64  `gorm:"not_null;default:0" json:"ut"`
+	Del   bool   `gorm:"type:bool;not_null;default:false" json:"del,omitempty"`
+	Extra string `gorm:"column:extra;type:mediumtext;" json:"extra"`
 }
 
 type RecordSt struct {
