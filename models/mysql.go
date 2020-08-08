@@ -40,7 +40,7 @@ func AppendDBCONF(dbname string, db *gorm.DB) {
 	return
 }
 
-// input: test: output: default
+// input: information_schema: output: default
 // input: default: output: default
 // input: dbname output: dbname
 func ConnectOrCreateAndConnect(dbname string) *gorm.DB {
@@ -59,7 +59,7 @@ func ConnectOrCreateAndConnect(dbname string) *gorm.DB {
 	} else if db != nil {
 		// 连接成功
 		AppendDBCONF(dbname, db)
-		if dbname == "test" {
+		if dbname == "information_schema" {
 			// 创建default，并返回default连接
 			db = CreateDB(db, DEFAULT_DB_NAME)
 			if db != nil {
@@ -75,10 +75,10 @@ func ConnectOrCreateAndConnect(dbname string) *gorm.DB {
 	if dbname != DEFAULT_DB_NAME {
 		db := DB_CONF[DEFAULT_DB_NAME]
 		if db == nil {
-			db = ConnectOrCreateAndConnect("test")
+			db = ConnectOrCreateAndConnect("information_schema")
 		}
 		if db == nil {
-			fmt.Println("fail conn test db for create database")
+			fmt.Println("fail conn information_schema db for create database")
 			return nil
 		}
 		db = CreateDB(db, dbname)
@@ -90,7 +90,7 @@ func ConnectOrCreateAndConnect(dbname string) *gorm.DB {
 		}
 	} else {
 		// 连接默认db情况
-		return ConnectOrCreateAndConnect("test")
+		return ConnectOrCreateAndConnect("information_schema")
 	}
 
 	//return nil
