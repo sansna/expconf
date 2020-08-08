@@ -161,6 +161,7 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 	set_st := param.SetSt
 	set_et := param.SetEt
 	del := param.Del
+	extra := param.Extra
 
 	//byt, _ := json.Marshal(param)
 	//fmt.Println(string(byt))
@@ -199,6 +200,7 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 		// modify
 		map_updates := make(map[string]interface{})
 		map_updates["val"] = val
+		map_updates["extra"] = extra
 		map_updates["ut"] = time.Now().Unix()
 		// 针对修改生效起时时间的要检查是否与其他规则冲突
 		orig_record := proto.RecordSt{}
