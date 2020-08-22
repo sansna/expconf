@@ -76,9 +76,10 @@ type GetConfigData struct {
 }
 
 type ModConfigParam struct {
-	App     string `json:"app"`
-	Env     string `json:"env"`
-	ExpName string `json:"exp_name"`
+	App      string `json:"app"`
+	Env      string `json:"env"`
+	ExpName  string `json:"exp_name"`
+	DataType string `json:"data_type"`
 	*OneModifySt
 	SetSt int64 `json:"set_st,omitempty"`
 	SetEt int64 `json:"set_et,omitempty"`

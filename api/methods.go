@@ -199,6 +199,33 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 	del := param.Del
 	extra := param.Extra
 
+	dt := param.DataType
+	switch dt {
+	case "json":
+		fallthrough
+	default:
+		if len(val) > 0 {
+			x := struct{}{}
+			err := json.Unmarshal([]byte(val), &x)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+		} else {
+			param.Val = "{}"
+		}
+	}
+
+	if len(extra) > 0 {
+		x := struct{}{}
+		err := json.Unmarshal([]byte(extra), &x)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	} else {
+		param.Extra = "{}"
+	}
 	//byt, _ := json.Marshal(param)
 	//fmt.Println(string(byt))
 
