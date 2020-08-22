@@ -1,7 +1,7 @@
 package api
 
 import (
-	//"encoding/json"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -65,6 +65,35 @@ func FindNoConflictRecord(conn *gorm.DB, r *proto.OneModifySt, except_et int64) 
 
 func AddConfig(param *proto.AddConfigParam) (err error) {
 	//fun := "AddConfig"
+
+	dt := param.DataType
+	switch dt {
+	case "json":
+		fallthrough
+	default:
+		val := param.OneModifySt.Val
+		if len(val) > 0 {
+			x := struct{}{}
+			err := json.Unmarshal([]byte(val), &x)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+		} else {
+			param.Val = "{}"
+		}
+	}
+	extra := param.OneModifySt.Extra
+	if len(extra) > 0 {
+		x := struct{}{}
+		err := json.Unmarshal([]byte(extra), &x)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+	} else {
+		param.Extra = "{}"
+	}
 
 	if param.St < 0 || param.Et < 0 || len(param.Val) == 0 || param.Tid < 0 || len(param.Key) == 0 {
 		return nil

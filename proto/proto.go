@@ -36,10 +36,11 @@ type HistoryRecordSt struct {
 }
 
 type AddConfigParam struct {
-	App     string `json:"app"`
-	Env     string `json:"env"`
-	Tid     int64  `json:"tid"`
-	ExpName string `json:"exp_name"`
+	App      string `json:"app"`
+	Env      string `json:"env"`
+	Tid      int64  `json:"tid"`
+	ExpName  string `json:"exp_name"`
+	DataType string `json:"data_type"`
 	*OneModifySt
 }
 
