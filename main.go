@@ -2,8 +2,8 @@ package main
 
 import (
 	//"strconv"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	//"time"
 
 	"github.com/gin-gonic/gin"
@@ -71,10 +71,13 @@ func main() {
 		})
 	})
 
+	// Put this as defer func to make sure it runs.
+	defer func() {
+		for _, db := range models.DB_CONF {
+			db.Close()
+		}
+	}()
 	r.Run()
-	for _, db := range models.DB_CONF {
-		db.Close()
-	}
 
 	return
 }
