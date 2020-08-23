@@ -30,7 +30,7 @@ func GetGroupOrAdd(conn *gorm.DB, tid int64, name string) int64 {
 	gst := proto.GroupSt{}
 	err := conn.Where("id=? and del = false", tid).Find(&gst).Error
 	if err != nil {
-		logger.Errorf("%s: fail get %v, err: %v", fun, tid, err)
+		logger.Infof("%s: fail get %v, err: %v", fun, tid, err)
 	}
 	if gst.Id > 0 {
 		return gst.Id
