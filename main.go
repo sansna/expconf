@@ -1,8 +1,8 @@
 package main
 
-import "fmt"
 import (
 	//"strconv"
+	"fmt"
 	"encoding/json"
 	//"time"
 
@@ -12,12 +12,21 @@ import (
 	"github.com/sansna/expconf/api"
 	"github.com/sansna/expconf/models"
 	"github.com/sansna/expconf/proto"
+	"github.com/sansna/expconf/utils/logger"
 )
 
 func main() {
+	fun := "main"
+	err := logger.InitLogger("dev")
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	defer logger.Exit()
+
 	models.InitDB(models.DEFAULT_DB_NAME)
 
-	fmt.Println(models.DB_CONF)
+	logger.Debugf("%s: got dbconfs: %v", fun, models.DB_CONF)
 
 	r := gin.Default()
 
@@ -26,7 +35,7 @@ func main() {
 		param := proto.AddConfigParam{}
 
 		json.Unmarshal([]byte(d), &param)
-		fmt.Println(param)
+		logger.Debugf("%s: got param: %v", fun, param)
 
 		api.AddConfig(&param)
 		c.JSON(200, nil)
@@ -36,7 +45,7 @@ func main() {
 		param := proto.ModConfigParam{}
 
 		json.Unmarshal([]byte(d), &param)
-		fmt.Println(param, param.OneModifySt)
+		logger.Debugf("%s: got param: %v", fun, param)
 
 		api.ModConfig(&param)
 		c.JSON(200, nil)
@@ -54,6 +63,8 @@ func main() {
 		d, _ := c.GetRawData()
 		param := &proto.GetConfigParam{}
 		json.Unmarshal(d, param)
+		logger.Debugf("%s: got param: %v", fun, param)
+
 		data, _ := api.GetConfig(param)
 		c.JSON(200, gin.H{
 			"data": data,

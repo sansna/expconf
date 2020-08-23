@@ -3,13 +3,14 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	//"fmt"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/sansna/expconf/models"
 	"github.com/sansna/expconf/proto"
+	"github.com/sansna/expconf/utils/logger"
 )
 
 func GetDbName(app string, env string) string {
@@ -25,10 +26,11 @@ func GetDbName(app string, env string) string {
 // retval: > 0: got column
 // = 0: not found.
 func GetGroupOrAdd(conn *gorm.DB, tid int64, name string) int64 {
+	fun := "GetGroupOrAdd"
 	gst := proto.GroupSt{}
 	err := conn.Where("id=? and del = false", tid).Find(&gst).Error
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorf("%s: fail get %v, err: %v", fun, tid, err)
 	}
 	if gst.Id > 0 {
 		return gst.Id
@@ -49,13 +51,14 @@ func GetGroupOrAdd(conn *gorm.DB, tid int64, name string) int64 {
 // retval: false: do conflict
 // true: no conflict
 func FindNoConflictRecord(conn *gorm.DB, r *proto.OneModifySt, except_et int64) bool {
+	fun := "FindNoConflictRecord"
 	other := proto.RecordSt{}
 	if except_et >= 0 {
 		conn.Where("tid=? and `key`=? and ((st < ? and ? < et) or (st < ? and ? < et) or (? < st and et < ?)) and et != ?", r.Tid, r.Key, r.Et, r.Et, r.St, r.St, r.St, r.Et, except_et).Limit(1).Find(&other)
 	} else {
 		conn.Where("tid=? and `key`=? and ((st < ? and ? < et) or (st < ? and ? < et) or (? < st and et < ?))", r.Tid, r.Key, r.Et, r.Et, r.St, r.St, r.St, r.Et).Limit(1).Find(&other)
 	}
-	fmt.Println("found other as dup", other.ID, r.Et, r.St, other.Et, other.St)
+	logger.Debugf("%s: r: %v, other:%v", fun, r, other)
 
 	if len(other.Key) > 0 {
 		return false
@@ -64,7 +67,7 @@ func FindNoConflictRecord(conn *gorm.DB, r *proto.OneModifySt, except_et int64) 
 }
 
 func AddConfig(param *proto.AddConfigParam) (err error) {
-	//fun := "AddConfig"
+	fun := "AddConfig"
 
 	dt := param.DataType
 	switch dt {
@@ -76,7 +79,7 @@ func AddConfig(param *proto.AddConfigParam) (err error) {
 			x := struct{}{}
 			err := json.Unmarshal([]byte(val), &x)
 			if err != nil {
-				fmt.Println(err)
+				logger.Errorf("%s: fail err: %v", fun, err)
 				return err
 			}
 		} else {
@@ -88,7 +91,7 @@ func AddConfig(param *proto.AddConfigParam) (err error) {
 		x := struct{}{}
 		err := json.Unmarshal([]byte(extra), &x)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorf("%s: fail err: %v", fun, err)
 			return err
 		}
 	} else {
@@ -109,7 +112,7 @@ func AddConfig(param *proto.AddConfigParam) (err error) {
 	dbname := GetDbName(param.App, param.Env)
 	if len(dbname) > 0 {
 		db := models.GetConn(dbname)
-		fmt.Println(models.DB_CONF)
+		logger.Infof("%s: got db : %v", fun, models.DB_CONF)
 		// 开始事务
 		db = db.Begin()
 		defer func() {
@@ -161,10 +164,13 @@ func GetGroups(param *proto.GetGroupsParam) (data *proto.GetGroupsData, err erro
 }
 
 func GetConfig(param *proto.GetConfigParam) (data *proto.GetConfigData, err error) {
+	fun := "GetConfig"
 	app := param.App
 	env := param.Env
 	tid := param.Tid
 	key := param.Key
+	i := 1 / param.Tid
+	logger.Debugf("%s: got i: %v", fun, i)
 
 	data = &proto.GetConfigData{}
 	now := time.Now().Unix()
@@ -178,16 +184,17 @@ func GetConfig(param *proto.GetConfigParam) (data *proto.GetConfigData, err erro
 		err = nil
 		return
 	} else if err != nil {
-		fmt.Println(err)
+		logger.Errorf("%s: fail . err: %v", fun, err)
 		return
 	}
 	data.RecordSt = &r
 
-	fmt.Println(tid, key, now, r)
+	logger.Debugf("%s: got param: %v, data: %v", fun, param, data)
 	return
 }
 
 func ModConfig(param *proto.ModConfigParam) (err error) {
+	fun := "ModConfig"
 	app := param.App
 	env := param.Env
 	tid := param.OneModifySt.Tid
@@ -208,7 +215,7 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 			x := struct{}{}
 			err := json.Unmarshal([]byte(val), &x)
 			if err != nil {
-				fmt.Println(err)
+				logger.Errorf("%s: got err: %v", fun, err)
 				return err
 			}
 		} else {
@@ -220,14 +227,13 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 		x := struct{}{}
 		err := json.Unmarshal([]byte(extra), &x)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorf("%s: got err: %v", fun, err)
 			return err
 		}
 	} else {
 		param.Extra = "{}"
 	}
 	//byt, _ := json.Marshal(param)
-	//fmt.Println(string(byt))
 
 	dbname := GetDbName(app, env)
 	if len(dbname) == 0 {
@@ -235,26 +241,26 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 	}
 
 	db := models.GetConn(dbname)
-	fmt.Println(db, models.DB_CONF)
+	logger.Debugf("%s: got db: %v", fun, models.DB_CONF)
 	// 开始事务
 	db = db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("rollback because recov")
+			logger.Errorf("%s: got recover: %v", fun, r)
 			db.Rollback()
 		} else if err != nil {
-			fmt.Println("rollback because err", err)
+			logger.Errorf("%s: got recover: %v", fun, err)
 			db.Rollback()
 		}
 	}()
 	if db == nil {
-		fmt.Println("db nil. param", param)
+		logger.Infof("%s: got db nil: %v", fun, param)
 		return errors.New(" no conn get:" + dbname)
 	}
 
 	if del {
 		cnt := db.Where("tid=? and `key`=? and et=?", tid, key, et).Delete(&proto.RecordSt{}).RowsAffected
-		fmt.Println("deleted ", cnt)
+		logger.Infof("%s: deleted: %v, cnt: %v", fun, param, cnt)
 		//if err != nil {
 		//	fmt.Println("fail del ", param, err)
 		//	return
@@ -269,7 +275,7 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 		orig_record := proto.RecordSt{}
 		err = db.Where("tid=? and `key`=? and et=? and del=false", tid, key, et).Limit(1).Find(&orig_record).Error
 		if err != nil {
-			fmt.Println("no orig rec. param", param, err)
+			logger.Errorf("%s: param :%v, got err: %v", fun, param, err)
 			return
 		}
 
@@ -285,14 +291,14 @@ func ModConfig(param *proto.ModConfigParam) (err error) {
 		if !FindNoConflictRecord(db, orig_record.OneModifySt, et) {
 			// conflict
 			err = errors.New("conflicted, modfication not take eff.")
-			fmt.Println("conflict, param", param)
+			logger.Errorf("%s: param :%v, got err: %v", fun, param, err)
 			return
 		}
 
-		fmt.Println("got mapupdate: ", map_updates)
+		logger.Infof("%s: got param: %v, mpa: %v", fun, param, map_updates)
 		err = db.Model(&proto.RecordSt{}).Where("tid=? and `key`=? and et=?", tid, key, et).Updates(map_updates).Error
 		if err != nil {
-			fmt.Println("fail update param", param, "err:", err)
+			logger.Errorf("%s: param :%v, got err: %v", fun, param, err)
 			return errors.New(" fail update config.")
 		}
 	}
